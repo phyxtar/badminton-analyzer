@@ -7,11 +7,16 @@ import base64
 import numpy as np
 from io import BytesIO
 from PIL import Image
+import threading
+import logging
 
 app = Flask(__name__)
 CORS(app)
 
 mp_pose = mp.solutions.pose
+
+# Logger setup for debugging
+logging.basicConfig(level=logging.DEBUG)
 
 def frame_to_base64(frame):
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -52,7 +57,10 @@ def extract_pose_and_analyze(video_path):
             if not ret:
                 break
 
+            # Resize frame to reduce processing load
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_rgb = cv2.resize(frame_rgb, (640, 480))  # Resize to 640x480
+
             results = pose.process(frame_rgb)
 
             if results.pose_landmarks:
@@ -122,6 +130,14 @@ def extract_pose_and_analyze(video_path):
         }
     }
 
+def analyze_video_thread(video_path):
+    try:
+        result = extract_pose_and_analyze(video_path)
+        # Log the result or save it to a database, etc.
+        logging.info("Analysis complete: %s", result)
+    except Exception as e:
+        logging.error(f"Error processing video: {e}")
+
 @app.route('/')
 def home():
     return send_file("index.html")
@@ -133,12 +149,19 @@ def analyze():
 
     video = request.files['video'].read()
 
+    # Check for file size
+    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+    if len(video) > MAX_FILE_SIZE:
+        return jsonify({"error": "File size exceeds the limit of 50 MB"}), 400
+
     with tempfile.NamedTemporaryFile(delete=True, suffix=".mp4") as temp_file:
         temp_file.write(video)
         temp_file.flush()
-        result = extract_pose_and_analyze(temp_file.name)
 
-    return jsonify(result)
+        # Run the video analysis in a background thread
+        threading.Thread(target=analyze_video_thread, args=(temp_file.name,)).start()
+
+    return jsonify({"status": "Processing started. You will be notified when complete."})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)  # `use_reloader=False` to avoid double-threading during debug
