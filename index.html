@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badminton Video Analyzer</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+      background: url('https://www.shutterstock.com/image-photo/badminton-shuttlecock-black-background-used-600nw-1647498844.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+    }
+
+    .box {
+        border: 2px solid;
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 40px;
+      border-radius: 15px;
+      text-align: center;
+      width: 100%;
+      max-width: 650px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+    }
+
+    h1 {
+      font-size: 34px;
+      margin-bottom: 25px;
+      color: #ff9800;
+      text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+    }
+
+    input[type="file"] {
+      font-size: 16px;
+      padding: 12px;
+      margin: 10px 0;
+      border: 2px solid #ff9800;
+      border-radius: 8px;
+      width: 100%;
+      background-color: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button {
+      background-color: #ff9800;
+      color: white;
+      font-size: 18px;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #e68900;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 25px;
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 10px;
+      color: #333;
+      display: none;
+      text-align: left;
+    }
+
+    .result h3 {
+      font-size: 28px;
+      color: #ff9800;
+      margin-bottom: 15px;
+    }
+
+    .result p,
+    .result ul {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .result ul {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+
+    .result img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    .progress-container {
+      width: 100%;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      margin-top: 20px;
+      height: 20px;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background-color: #4caf50;
+      border-radius: 10px;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      font-weight: bold;
+    }
+
+    .loader {
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid #ff9800;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1.2s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .speed-bar-container {
+      margin-top: 10px;
+      background: #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+    }
+
+    .speed-bar {
+      height: 100%;
+      width: 0;
+      background-color: #03a9f4;
+      text-align: center;
+      color: white;
+      font-weight: bold;
+      transition: width 1s ease;
+    }
+
+    footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 14px;
+      color: #ddd;
+    }
+
+    footer img {
+      vertical-align: middle;
+      margin-right: 6px;
+      filter: brightness(0) invert(1);
+    }
+
+    footer strong {
+      color: #ff9800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h1>Badminton Video Analyzer</h1>
+    <form id="uploadForm">
+      <input type="file" name="video" accept="video/*" required>
+      <button type="submit">Upload & Analyze</button>
+    </form>
+
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+
+    <div id="loader" class="loader" style="display: none;"></div>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <footer>
+    <hr style="border: 1px solid rgba(255,255,255,0.1); width: 80%; margin: 30px auto;">
+    <div>
+      <img src="https://cdn-icons-png.flaticon.com/512/1006/1006771.png" width="18" height="18" alt="dev icon">
+      Designed & Developed by
+      <strong>
+        🧑‍💻FrustratedCoder
+      </strong>
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const result = document.getElementById('result');
+    const progressBar = document.getElementById('progressBar');
+    const progressContainer = document.querySelector('.progress-container');
+    const loader = document.getElementById('loader');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      result.innerHTML = "";
+      result.style.display = "none";
+      progressContainer.style.display = "block";
+      loader.style.display = "block";
+      progressBar.style.width = "0%";
+
+      const formData = new FormData(form);
+      const xhr = new XMLHttpRequest();
+
+      xhr.open('POST', '/analyze', true);
+
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          progressBar.style.width = percent + "%";
+          progressBar.textContent = Math.round(percent) + "%";
+        }
+      };
+
+      xhr.onload = function () {
+        loader.style.display = "none";
+        progressContainer.style.display = "none";
+
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          result.style.display = "block";
+
+          let speedPercent = Math.min(Math.max((data.speed / 100) * 100, 0), 100);
+          result.innerHTML = `
+            <h3>Analysis Result</h3>
+            <p><strong>Best Shot:</strong> ${data.shot}</p>
+            <p><strong>Weakest Shot:</strong> ${data.weakest_shot}</p>
+            <p><strong>Movement Type:</strong> ${data.movement_type}</p>
+            <p><strong>Speed:</strong> ${data.speed} km/h</p>
+
+            <div class="speed-bar-container">
+              <div class="speed-bar" style="width: ${speedPercent}%;">${Math.round(speedPercent)}%</div>
+            </div>
+
+            <p><strong>Suggestions:</strong></p>
+            <ul>${data.suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
+            ${data.images.best ? `<p><strong>Best Shot Frame:</strong><br><img src="data:image/jpeg;base64,${data.images.best}" width="300"/></p>` : ''}
+            ${data.images.worst ? `<p><strong>Weakest Shot Frame:</strong><br><img src="data:image/jpeg;base64,${data.images.worst}" width="300"/></p>` : ''}
+          `;
+        } else {
+          result.innerHTML = `<p>Error during upload: ${xhr.statusText}</p>`;
+        }
+      };
+
+      xhr.onerror = function () {
+        loader.style.display = "none";
+        result.innerHTML = `<p>Error during upload.</p>`;
+      };
+
+      xhr.send(formData);
+    });
+  </script>
+</body>
+
+</html>
