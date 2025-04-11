@@ -7,21 +7,13 @@ import base64
 import numpy as np
 from io import BytesIO
 from PIL import Image
-import psutil
-import os
 
 app = Flask(__name__)
 CORS(app)
 
 mp_pose = mp.solutions.pose
 
-def track_memory():
-    """Track memory usage of the Flask app process."""
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss / 1024 ** 2  # in MB
-
 def frame_to_base64(frame):
-    """Convert a frame to base64 encoded JPEG."""
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     pil_img = Image.fromarray(frame_rgb)
     buffer = BytesIO()
@@ -29,7 +21,6 @@ def frame_to_base64(frame):
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 def extract_pose_and_analyze(video_path):
-    """Process the video and extract pose and movement data."""
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30  # Default to 30 if FPS not detected
 
@@ -55,15 +46,11 @@ def extract_pose_and_analyze(video_path):
     worst_frame_img = None
     jump_frame_img = None
 
-    # Initialize MediaPipe Pose with proper cleanup after usage
     with mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5) as pose:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-
-            # Resize frame to reduce memory usage
-            frame = cv2.resize(frame, (640, 480))
 
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(frame_rgb)
@@ -102,12 +89,7 @@ def extract_pose_and_analyze(video_path):
 
             frame_index += 1
 
-            # Process every 5th frame
-            if frame_index % 5 != 0:
-                continue
-
-        # Release the video capture and other resources
-        cap.release()
+    cap.release()
 
     total_frames = frame_index
     time_seconds = total_frames / fps if fps else 1
@@ -126,10 +108,6 @@ def extract_pose_and_analyze(video_path):
         suggestions.append("Incorporate more jumping smashes to add power.")
     if not suggestions:
         suggestions = ["Great form! Keep it up."]
-
-    # Track memory usage
-    memory_usage = track_memory()
-    print(f"Memory usage: {memory_usage} MB")
 
     return {
         "shot": best_shot,
@@ -150,7 +128,6 @@ def home():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """Handle the video upload and analysis request."""
     if 'video' not in request.files:
         return jsonify({"error": "No video uploaded"}), 400
 
